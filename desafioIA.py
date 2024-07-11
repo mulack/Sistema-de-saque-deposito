@@ -33,6 +33,10 @@ class Cliente:
         self.indice_conta = 0
 
     def realizar_transacao(self, conta, transacao):
+        if len(conta.historico.transacoes_do_dia()) >= 5:
+            print("\n Você excedeu o número de transações permitidas para hoje!")
+            return
+        
         transacao.registrar(conta)
 
     def adicionar_conta(self, conta):
@@ -113,6 +117,10 @@ class ContaCorrente(Conta):
         self._limite = limite
         self._limite_saques = limite_saques
 
+    @classmethod
+    def nova_conta(cls, cliente, numero, limite, limite_saques):
+        return cls(numero, cliente, limite, limite_saques)
+    
     def sacar(self, valor):
         numero_saques = len(
             [transacao for transacao in self.historico.transacoes if transacao["tipo"] == Saque.__name__]
@@ -161,6 +169,17 @@ class Historico:
         for transacao in self._transacoes:
             if tipo_transacao is None or transacao["tipo"].lower() == tipo_transacao.lower():
                 yield transacao
+    
+    def transacoes_do_dia(self):
+        data_atual = datetime.utcnow().date()
+        transacoes = []
+        for transacao in self._transacoes:
+            data_transacao = datetime.strptime(
+                transacao["data"], "%d-%m-%Y %H:%M:%S"
+            ).date()
+            if data_atual == data_transacao:
+                transacoes.append(transacao)
+        return transacoes
 
 
 class Transacao(ABC):
@@ -211,6 +230,7 @@ def log_transacao(func):
         return resultado
 
     return envelope
+
 
 def filtrar_cliente(cpf, clientes):
     clientes_filtrados = [cliente for cliente in clientes if cliente.cpf == cpf]
